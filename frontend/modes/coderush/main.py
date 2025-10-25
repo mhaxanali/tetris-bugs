@@ -1,7 +1,7 @@
 import timer
 from controls import Controller
 from engine.game import BaseGameManager
-from js import document, setInterval, window
+from js import KeyboardEvent, document, setInterval, window
 from modal import continue_modal
 from pyodide.ffi import create_proxy
 from ui_manager import UIManager
@@ -25,17 +25,14 @@ def resume() -> None:
     timer.resume_timer()
 
 
-def main() -> None:
-    """Initialize the game."""
+def bind_dom_elements() -> None:
+    """Bind the elements from the DOM to their respective functions."""
     ui_manager = UIManager(game_manager)
     game_manager.ui_manager = ui_manager  # Inject ui_manager instance (dependency injection)
-    controller = Controller(game_manager, ui_manager)  # Inject game_manager and ui_manager instance
 
     ui_manager.create_visual_grid()  # Create display grid
 
-    # Set timer callback for game over
-    timer.on_time_up = ui_manager.show_game_over
-
+    controller = Controller(game_manager, ui_manager)  # Inject game_manager and ui_manager instance
     # Bind text-input
     input_box = document.getElementById("text-input")
     input_proxy = create_proxy(lambda evt: controller.handle_input(evt, input_box))
@@ -82,8 +79,21 @@ def main() -> None:
     handle_key_proxy = create_proxy(lambda evt: controller.handle_key(evt))
     window.addEventListener("keydown", handle_key_proxy)
 
+
+def main() -> None:
+    """Initialize the game."""
+    ui_manager = UIManager(game_manager)
+    game_manager.ui_manager = ui_manager  # Inject ui_manager instance (dependency injection)
+
+    ui_manager.create_visual_grid()  # Create display grid
+
+    # Set timer callback for game over
+    timer.on_time_up = ui_manager.show_game_over
+
+    bind_dom_elements()
+
     # ✅ Global ESC key handler
-    def handle_global_keys(evt):
+    def handle_global_keys(evt: KeyboardEvent) -> None:
         if evt.key == "Escape":
             pause_screen = document.getElementById("pause-screen")
             if pause_screen.hidden:
